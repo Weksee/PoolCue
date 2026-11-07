@@ -1,7 +1,7 @@
 /* Pool&Cue — общий скрипт: меню, подвал, модальные окна, формы, карточки */
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const money=n=>n.toLocaleString('ru-RU')+' ₽';
-const NAV=[['index.html','Главная'],['catalog.html','Каталог'],['tournaments.html','Турниры'],['about.html','О клубе'],['contacts.html','Контакты']];
+const NAV=[['index.html','Главная'],['catalog.html','Каталог'],['tournaments.html','Турниры'],['about.html','О клубе']];
 const ICON={table:'<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M6 17v3M18 17v3"/>',bar:'<path d="M5 4h14l-6 8v6h3M11 18H8M12 12 5 4"/>',cup:'<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4M12 13v4M9 20h6"/>',cue:'<path d="m4 20 14-14M16 4l4 4M3 21l2-2"/>'};
 const icon=n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
 
