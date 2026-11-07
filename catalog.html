@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Каталог столов и залов — Pool&amp;Cue</title>
+<meta name="description" content="Каталог столов Pool&Cue: русский бильярд, пул и снукер. Фильтры по игре, залу и цене.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23150c07' stroke='%23d3a54a' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f1e6d1'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/utilities.css">
+<script src="js/data.js"></script>
+<script src="js/main.js" defer></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+
+<nav class="crumbs container" aria-label="Хлебные крошки" data-trail="Каталог столов"></nav>
+<div class="container page-head"><h1 class="page-head__title">Каталог столов</h1><p class="page-head__lead">Десять столов в пяти залах. Отфильтруйте по игре, залу и цене, затем нажмите «Забронировать».</p></div>
+<div class="container"><nav class="tabs" aria-label="Разделы каталога"><a class="tabs__link tabs__link--active" href="catalog.html" aria-current="page"><span class="tabs__title">Столы</span><span class="tabs__text">Русский бильярд, пул, снукер</span></a><a class="tabs__link" href="sports.html"><span class="tabs__title">Спорт-залы</span><span class="tabs__text">Матчи на экранах и стол рядом</span></a><a class="tabs__link" href="menu.html"><span class="tabs__title">Мини-бар</span><span class="tabs__text">Напитки и закуски к столу</span></a></nav></div>
+<div class="container grid gap-8 pb-8 lg:grid-cols-[290px_1fr]">
+  <aside class="filters form-panel" aria-label="Фильтры">
+    <div><p class="field__label mb-2">Игра</p><div class="chips" id="fType"></div></div>
+    <div class="field"><label class="field__label" for="fHall">Зал</label><select class="field__input" id="fHall"><option value="all">Все залы</option></select></div>
+    <div class="field"><label class="field__label" for="fPrice">Цена за час: до <output id="fPriceOut">1500 ₽</output></label><input type="range" id="fPrice" min="300" max="1500" step="50" value="1500"></div>
+    <div class="field"><label class="field__label" for="fSort">Сортировка</label><select class="field__input" id="fSort"><option value="def">По умолчанию</option><option value="asc">Сначала дешевле</option><option value="desc">Сначала дороже</option></select></div>
+    <button class="btn btn--ghost btn--block" id="fReset" type="button">Сбросить фильтры</button>
+  </aside>
+  <section aria-live="polite"><p class="mb-4 text-[color:var(--muted)]" id="count"></p><div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" id="grid"></div></section>
+</div>
+
+</main>
+<div id="site-footer"></div>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+
+const q=new URLSearchParams(location.search);
+$("#fType").innerHTML=[["all","Все"],...Object.entries(TYPES)].map(([v,t])=>`<label class="chip"><input type="radio" name="type" value="${v}"><span>${t}</span></label>`).join("");
+$("#fHall").innerHTML+=HALLS.map(h=>`<option>${h}</option>`).join("");
+const setType=v=>{const r=$(`input[name=type][value="${v}"]`)||$('input[name=type][value="all"]');r.checked=true};
+setType(q.get("type")||"all");if(HALLS.includes(q.get("hall")))$("#fHall").value=q.get("hall");
+function render(){const type=$("input[name=type]:checked").value,hall=$("#fHall").value,max=+$("#fPrice").value,s=$("#fSort").value;
+$("#fPriceOut").textContent=money(max);
+let l=TABLES.filter(t=>(type==="all"||t.type===type)&&(hall==="all"||t.hall===hall)&&t.price<=max);
+if(s!=="def")l.sort((a,b)=>s==="asc"?a.price-b.price:b.price-a.price);
+const n=l.length,w=n%10===1&&n%100!==11?"стол":(n%10>1&&n%10<5&&(n%100<10||n%100>20))?"стола":"столов";
+$("#count").textContent=`Найдено: ${n} ${w}`;
+$("#grid").innerHTML=n?l.map(cardHTML).join(""):`<div class="empty sm:col-span-2 xl:col-span-3"><h3 class="text-2xl mb-2">Ничего не нашлось</h3><p>Попробуйте увеличить цену или выбрать другой зал.</p></div>`}
+$$(".filters input,.filters select").forEach(el=>el.addEventListener("input",render));
+$("#fReset").onclick=()=>{setType("all");$("#fHall").value="all";$("#fPrice").value=1500;$("#fSort").value="def";render()};
+render();
+
+});
+</script>
+</body>
+</html>

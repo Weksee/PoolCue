@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Спорт-залы с трансляциями — Pool&amp;Cue</title>
+<meta name="description" content="Залы Pool&Cue с телевизорами: смотрите матчи и играйте в бильярд за одним столом.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23150c07' stroke='%23d3a54a' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f1e6d1'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/utilities.css">
+<script src="js/data.js"></script>
+<script src="js/main.js" defer></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+
+<nav class="crumbs container" aria-label="Хлебные крошки" data-trail="Спорт-залы"></nav>
+<div class="container page-head"><h1 class="page-head__title">Матч и бильярд за одним столом</h1><p class="page-head__lead">Три зала с экранами и звуком трансляции. Выберите матч, зал и стол, мы закрепим место на всё время игры.</p></div>
+<div class="container"><nav class="tabs" aria-label="Разделы каталога"><a class="tabs__link" href="catalog.html"><span class="tabs__title">Столы</span><span class="tabs__text">Русский бильярд, пул, снукер</span></a><a class="tabs__link tabs__link--active" href="sports.html" aria-current="page"><span class="tabs__title">Спорт-залы</span><span class="tabs__text">Матчи на экранах и стол рядом</span></a><a class="tabs__link" href="menu.html"><span class="tabs__title">Мини-бар</span><span class="tabs__text">Напитки и закуски к столу</span></a></nav></div>
+<section class="container pb-12"><div class="grid gap-6 lg:grid-cols-3" id="halls"></div></section>
+<section class="section section--felt"><div class="container grid gap-10 lg:grid-cols-[1.1fr_1fr]">
+  <div><h2 class="section__title mb-2">Расписание трансляций</h2><p class="mb-6 text-sm">Расписание примерное, актуальное публикуем за неделю.</p><div class="grid gap-4" id="matches"></div></div>
+  <div class="form-panel self-start" id="sBox"><h2 class="text-2xl mb-1">Занять стол на матч</h2><p class="mb-5 text-sm text-[color:var(--muted)]">Стол закрепляется на 3 часа с начала трансляции.</p>
+    <form id="sForm" novalidate class="grid gap-4">
+      <div class="field"><label class="field__label" for="sMatch">Матч</label><select class="field__input" id="sMatch" data-rule="required"></select></div>
+      <div class="grid gap-4 sm:grid-cols-2"><div class="field"><label class="field__label" for="sHall">Зал</label><select class="field__input" id="sHall"></select></div><div class="field"><label class="field__label" for="sTable">Стол</label><select class="field__input" id="sTable"></select></div></div>
+      <div class="field"><label class="field__label" for="sGuests">Гостей</label><select class="field__input" id="sGuests"></select></div>
+      <div class="field"><label class="field__label" for="sName">Имя</label><input class="field__input" id="sName" data-rule="required minlen:2"></div>
+      <div class="field"><label class="field__label" for="sPhone">Телефон</label><input class="field__input" id="sPhone" type="tel" data-rule="required phone" placeholder="+7 900 123-45-67"></div>
+      <div class="sum" id="sSum" aria-live="polite"></div>
+      <button class="btn btn--primary btn--lg btn--block" type="submit">Занять стол</button></form></div>
+</div></section>
+
+</main>
+<div id="site-footer"></div>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+
+const dt=d=>new Date(d+"T00:00").toLocaleDateString("ru-RU",{day:"numeric",month:"long"});
+$("#halls").innerHTML=SPORT_HALLS.map(h=>`<article class="card"><div class="card__media"><img src="images/${h.img}" alt="${h.name}" loading="lazy"></div><div class="card__body"><h3 class="card__title">${h.name}</h3><div class="screens" aria-label="Экранов: ${h.screens}">${"<i></i>".repeat(h.screens)}</div><p class="card__text">${h.desc}</p><p class="card__meta mt-1">Столы: ${h.tables.map(i=>`<a class="text-[color:var(--brass-light)]" href="table.html?id=${i}">${TABLES.find(t=>t.id===i).name}</a>`).join(", ")}</p></div></article>`).join("");
+$("#matches").innerHTML=MATCHES.map(m=>`<div class="event"><div class="event__date"><span>${new Date(m.date+"T00:00").getDate()}<small>${dt(m.date).split(" ")[1].slice(0,4)}</small></span></div><div><h3 class="event__title">${m.title}</h3><p class="event__meta">${m.sport}, начало в ${m.time}</p></div><button class="btn btn--primary btn--sm" data-pick="${m.id}">Выбрать</button></div>`).join("");
+const f=$("#sForm");
+f.sMatch.innerHTML=MATCHES.map(m=>`<option value="${m.id}">${dt(m.date)}, ${m.time}: ${m.title}</option>`).join("");
+f.sHall.innerHTML=SPORT_HALLS.map(h=>`<option value="${h.id}">${h.name}</option>`).join("");
+f.sGuests.innerHTML=Array.from({length:10},(_,i)=>`<option>${i+1}</option>`).join("");f.sGuests.value=4;
+function tbl(){const h=SPORT_HALLS.find(x=>x.id===f.sHall.value);f.sTable.innerHTML=h.tables.map(i=>{const t=TABLES.find(x=>x.id===i);return `<option value="${i}">${t.name}, ${money(t.price)}/ч</option>`}).join("");sum()}
+function sum(){const t=TABLES.find(x=>x.id==f.sTable.value),tot=t.price*3,d=Math.round(tot*.1);$("#sSum").innerHTML=`<div class="sum__row"><span>${money(t.price)} × 3 ч</span><span>${money(tot)}</span></div><div class="sum__row"><span>Скидка за трансляцию 10%</span><span>−${money(d)}</span></div><div class="sum__row sum__row--total"><span>Итого</span><span>${money(tot-d)}</span></div>`;return tot-d}
+f.sHall.onchange=tbl;f.sTable.onchange=sum;tbl();
+document.addEventListener("click",e=>{const b=e.target.closest("[data-pick]");if(!b)return;f.sMatch.value=b.dataset.pick;$("#sBox").scrollIntoView({behavior:"smooth",block:"center"});f.sName.focus({preventScroll:true})});
+f.onsubmit=e=>{e.preventDefault();if(!validateForm(f)){toast("Проверьте поля формы: есть ошибки",true);return}
+const m=MATCHES.find(x=>x.id==f.sMatch.value),t=TABLES.find(x=>x.id==f.sTable.value),h=SPORT_HALLS.find(x=>x.id===f.sHall.value),code="TV-"+Math.floor(1000+Math.random()*9000),tot=sum();
+$("#sBox").innerHTML=`<div class="text-center py-4"><div class="feature__icon mx-auto" style="width:4rem;height:4rem">${icon("cup")}</div><h2 class="text-2xl">Стол закреплён</h2><p class="mt-3">Номер брони: <b class="text-[color:var(--brass-light)]">${code}</b></p><p class="mt-2 text-[color:var(--muted)]">${h.name}, стол «${t.name}», ${dt(m.date)} с ${m.time} на 3 часа. К оплате в клубе: ${money(tot)}.</p><a class="btn btn--ghost mt-6" href="menu.html">Заказать напитки</a></div>`;toast("Стол на матч закреплён")};
+
+});
+</script>
+</body>
+</html>
