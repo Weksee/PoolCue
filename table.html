@@ -57,7 +57,7 @@ $("#tImg").innerHTML=`<img src="images/${t.img}" alt="Стол «${t.name}»: ${
 $("#tTags").innerHTML=t.tags.map(g=>`<span class="badge badge--${TAGS[g]}">${g}</span>`).join("");
 $("#tName").textContent=`Стол «${t.name}»`;$("#tDesc").textContent=t.desc;
 $("#tSpec").innerHTML=[["Игра",TYPES[t.type]],["Размер",t.size],["Зал",t.hall],["Цена",money(t.price)+" / час"]].map(([k,v])=>`<div class="spec__item"><p class="spec__k">${k}</p><p class="spec__v">${v}</p></div>`).join("");
-const f=$("#bookForm"),today=new Date().toISOString().slice(0,10);
+const f=$("#bookForm"),today=todayStr();
 f.date.min=today;f.date.value=today;
 f.time.innerHTML='<option value="">Выберите время</option>'+Array.from({length:12},(_,i)=>`<option>${String(i+12).padStart(2,"0")}:00</option>`).join("");
 f.players.innerHTML=Array.from({length:8},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join("");f.players.value=2;
@@ -65,13 +65,22 @@ f.hours.innerHTML=Array.from({length:6},(_,i)=>`<option value="${i+1}">${i+1} ч
 function calc(){const h=+f.hours.value,base=t.price*h,d=h>=3?Math.round(base*.1):0;
 $("#sum").innerHTML=`<div class="sum__row"><span>${money(t.price)} × ${h} ч</span><span>${money(base)}</span></div>${d?`<div class="sum__row"><span>Скидка 10% за 3 часа и больше</span><span>−${money(d)}</span></div>`:""}<div class="sum__row sum__row--total"><span>Итого</span><span>${money(base-d)}</span></div>`;return base-d}
 f.hours.addEventListener("change",calc);calc();
+const u=Auth.me(),qp=new URLSearchParams(location.search);
+if(u){f.name.value=u.name;f.phone.value=u.phone;f.email.value=u.email}
+if(qp.get("date")&&qp.get("date")>=today)f.date.value=qp.get("date");if(qp.get("time"))f.time.value=qp.get("time");if(qp.get("hours"))f.hours.value=qp.get("hours");calc();
+const busyBox=document.createElement("div");busyBox.className="notice";busyBox.hidden=true;$("#sum").before(busyBox);
+let busy=false;
+function check(){busy=false;busyBox.hidden=true;if(!f.date.value||!f.time.value)return;const l=Slots.busyHours(t.id,f.date.value,+f.time.value.slice(0,2),+f.hours.value);if(!l.length)return;busy=true;busyBox.hidden=false;
+busyBox.innerHTML=`<p><b>Стол занят</b> в ${l.map(x=>x+":00").join(", ")}. Выберите другое время или встаньте в лист ожидания: если время освободится, мы изменим статус заявки.</p><button class="btn btn--ghost btn--sm" id="waitBtn" type="button">Встать в лист ожидания</button>`}
+["date","time","hours"].forEach(n=>f[n].addEventListener("change",check));check();
+busyBox.addEventListener("click",e=>{if(!e.target.closest("#waitBtn"))return;needAuth(()=>addWait({tableId:t.id,table:t.name,date:f.date.value,time:f.time.value,hours:+f.hours.value}))});
 f.onsubmit=e=>{e.preventDefault();let ok=validateForm(f);
 if(f.date.value===today&&f.time.value&&+f.time.value.slice(0,2)<=new Date().getHours()){setError(f.time,"Это время уже прошло, выберите позже");ok=false}
 if(!ok){toast("Проверьте поля формы: есть ошибки",true);return}
-const code="PC-"+Math.floor(1000+Math.random()*9000),total=calc();
-try{const b=JSON.parse(localStorage.getItem("pc_bookings")||"[]");b.push({code,table:t.name,date:f.date.value,time:f.time.value,total});localStorage.setItem("pc_bookings",JSON.stringify(b))}catch(_){}
-$("#bookBox").innerHTML=`<div class="text-center py-4"><div class="feature__icon mx-auto" style="width:4rem;height:4rem">${icon("cup")}</div><h2 class="text-2xl">Стол забронирован</h2><p class="mt-3">Номер брони: <b class="text-[color:var(--brass-light)]">${code}</b></p><p class="mt-2 text-[color:var(--muted)]">«${t.name}», ${new Date(f.date.value).toLocaleDateString("ru-RU")} в ${f.time.value}, ${f.hours.value} ч. К оплате в клубе: ${money(total)}.</p><a class="btn btn--ghost mt-6" href="table.html?id=${t.id}">Забронировать ещё</a></div>`;
-toast("Бронь принята. Подтверждение придёт на почту")};
+if(busy){toast("Это время занято. Выберите другое или встаньте в лист ожидания",true);return}
+needAuth(()=>{const total=calc(),b=Bookings.add({type:"table",tableId:t.id,table:t.name,date:f.date.value,time:f.time.value,hours:+f.hours.value,players:+f.players.value,total});
+$("#bookBox").innerHTML=`<div class="text-center py-4"><div class="feature__icon mx-auto" style="width:4rem;height:4rem">${icon("cup")}</div><h2 class="text-2xl">Стол забронирован</h2><p class="mt-3">Номер брони: <b class="text-[color:var(--brass-light)]">${b.id}</b></p><p class="mt-2 text-[color:var(--muted)]">«${esc(t.name)}», ${fmtDate(b.date)} в ${b.time}, ${b.hours} ч. К оплате в клубе: ${money(total)}.</p><div class="flex flex-wrap gap-3" style="justify-content:center;margin-top:1.4rem"><a class="btn btn--primary" href="account.html">Мои брони</a><a class="btn btn--ghost" href="table.html?id=${t.id}">Забронировать ещё</a></div></div>`;
+toast("Бронь принята. Подтверждение придёт на почту")})};
 $("#more").innerHTML=TABLES.filter(x=>x.id!==t.id&&x.type===t.type).concat(TABLES.filter(x=>x.type!==t.type)).slice(0,3).map(cardHTML).join("");
 
 });

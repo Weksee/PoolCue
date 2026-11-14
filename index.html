@@ -103,6 +103,13 @@
   </div>
 </section>
 
+<section class="section" id="reviews">
+  <div class="container">
+    <div class="flex flex-wrap items-end justify-between gap-4 section__head" style="max-width:none"><div><h2 class="section__title">Отзывы гостей</h2><p class="section__lead" id="homeRating"></p></div><a class="btn btn--ghost" href="reviews.html">Все отзывы</a></div>
+    <div class="grid gap-5 md:grid-cols-3" id="homeReviews"></div>
+  </div>
+</section>
+
 <section class="section">
   <div class="container"><div class="cta"><h2 class="section__title">Забронируйте стол на сегодня</h2><p class="cta__text">Выберите стол, время и длительность — стоимость посчитается сразу. Подтверждение придёт на почту.</p><a class="btn btn--primary btn--lg" href="catalog.html">Выбрать стол</a></div></div>
 </section>
@@ -120,6 +127,7 @@ $("#promoList").innerHTML=PROMOS.map(p=>`<div class="promo"><p class="promo__big
 $("#qHall").innerHTML+=HALLS.map(h=>`<option>${h}</option>`).join("");
 const poolUI=initPool($("#poolCanvas"),{onUpdate:(sc,sh,l)=>{$("#gScore").textContent=sc;$("#gShots").textContent=sh;$("#gLeft").textContent=l},onScratch:()=>{$("#gHint").textContent="Белый в лузе. Он вернётся на место.";toast("Белый шар в лузе, он вернётся на стол",true)},onWin:n=>{$("#gHint").textContent=`Стол чист за ${n} уд.!`;toast(`Стол чист! Ударов: ${n}`)}});
 $("#gReset").onclick=()=>{poolUI.reset();$("#gHint").textContent="Готовы? Бейте по белому шару."};
+const rs=ratingStat();$("#homeRating").textContent=`Средняя оценка ${rs.avg.toFixed(1)} из 5 по ${rs.n} отзывам`;$("#homeReviews").innerHTML=allReviews().slice(0,3).map(reviewHTML).join("");
 $("#quick").onsubmit=e=>{e.preventDefault();location.href=`catalog.html?type=${$("#qType").value}&hall=${encodeURIComponent($("#qHall").value)}`};
 
 });

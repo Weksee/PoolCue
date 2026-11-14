@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Мои брони — Pool&amp;Cue</title>
+<meta name="description" content="Личный кабинет Pool&Cue: ваши брони столов, заказы бара и лист ожидания.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23150c07' stroke='%23d3a54a' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f1e6d1'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/utilities.css">
+<script src="js/data.js"></script>
+<script src="js/main.js" defer></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+
+<nav class="crumbs container" aria-label="Хлебные крошки" data-trail="Мои брони"></nav>
+<div class="container page-head"><h1 class="page-head__title">Мои брони</h1><p class="page-head__lead">Брони столов, заказы из мини-бара и заявки в листе ожидания.</p></div>
+<div class="container acc">
+  <aside class="form-panel acc__profile" id="profile"></aside>
+  <section><div class="chips acc__tabs"><label class="chip"><input type="radio" name="at" value="b" checked><span>Брони столов</span></label><label class="chip"><input type="radio" name="at" value="o"><span>Заказы бара</span></label><label class="chip"><input type="radio" name="at" value="w"><span>Лист ожидания</span></label></div><div class="acc__list" id="accList" aria-live="polite"></div></section>
+</div>
+</main>
+<div id="site-footer"></div>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+
+const me=Auth.me();if(!me){location.replace("auth.html?next=account.html");return}
+$("#profile").innerHTML=`<h2 class="text-2xl mb-3">Профиль</h2><p><b>${esc(me.name)}</b></p><p class="rec__meta">${esc(me.email)}</p><p class="rec__meta">${esc(me.phone)}</p><button class="btn btn--ghost btn--block" id="out" type="button" style="margin-top:1.2rem">Выйти</button>`;
+$("#out").onclick=()=>{Auth.logout();location.href="index.html"};
+let tabv="b";
+const range=b=>`${b.time}–${String((+b.time.slice(0,2)+b.hours)%24).padStart(2,"0")}:00`;
+const empty=(t,x,h,l)=>`<div class="empty"><h3 class="text-2xl mb-2">${t}</h3><p>${x}</p><a class="btn btn--primary mt-4" href="${h}">${l}</a></div>`;
+const state=b=>b.status==="cancelled"?["off","Отменена"]:(new Date(new Date(b.date+"T"+b.time).getTime()+b.hours*3600e3)<new Date()?["off","Завершена"]:["new","Активна"]);
+function render(){const L=$("#accList");
+ if(tabv==="b"){const l=Bookings.mine().sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  L.innerHTML=l.length?l.map(b=>{const[k,t]=state(b);return `<article class="rec"><div class="rec__main"><h3 class="rec__title">Стол «${esc(b.table)}»</h3><p class="rec__meta">${fmtDate(b.date)}, ${range(b)}</p><p class="rec__meta">${b.type==="sport"?"Матч: "+esc(b.match)+". ":""}Номер: ${b.id}</p></div><div class="rec__side"><span class="badge badge--${k}">${t}</span><b>${money(b.total)}</b>${k==="new"?`<button class="btn btn--ghost btn--sm" data-cancel="${b.id}">Отменить бронь</button>`:""}</div></article>`}).join(""):empty("Броней пока нет","Выберите стол и забронируйте время.","catalog.html","К столам")}
+ if(tabv==="o"){const l=Orders.mine().sort((a,b)=>b.created-a.created);
+  L.innerHTML=l.length?l.map(o=>`<article class="rec"><div class="rec__main"><h3 class="rec__title">Заказ ${o.id}</h3><p class="rec__meta">${o.items.map(i=>esc(i.name)+" × "+i.qty).join(", ")}</p><p class="rec__meta">Принести: ${esc(o.where)}</p></div><div class="rec__side"><span class="badge badge--new">Принят</span><b>${money(o.total)}</b></div></article>`).join(""):empty("Заказов пока нет","Выберите напитки и закуски в мини-баре.","menu.html","В мини-бар")}
+ if(tabv==="w"){const l=Waitlist.mine().filter(w=>w.status!=="removed").sort((a,b)=>b.created-a.created);
+  L.innerHTML=l.length?l.map(w=>`<article class="rec"><div class="rec__main"><h3 class="rec__title">Стол «${esc(w.table)}»</h3><p class="rec__meta">${fmtDate(w.date)}, ${range(w)}</p><p class="rec__meta">Номер: ${w.id}</p></div><div class="rec__side"><span class="badge badge--${w.status==="free"?"free":"off"}">${w.status==="free"?"Освободилось":"В очереди"}</span>${w.status==="free"?`<a class="btn btn--primary btn--sm" href="table.html?id=${w.tableId}&date=${w.date}&time=${w.time}&hours=${w.hours}">Забронировать</a>`:""}<button class="btn btn--ghost btn--sm" data-rm="${w.id}">Удалить</button></div></article>`).join(""):empty("Заявок нет","Если нужный стол занят, можно встать в лист ожидания на странице стола.","catalog.html","К столам")}}
+$$("input[name=at]").forEach(r=>r.onchange=()=>{tabv=r.value;render()});
+$("#accList").onclick=e=>{const c=e.target.closest("[data-cancel]"),r=e.target.closest("[data-rm]");
+ if(r){Waitlist.update(r.dataset.rm,{status:"removed"});render();return}
+ if(c){const id=c.dataset.cancel,m=openModal(`<div class="modal__body"><h3 class="text-2xl">Отменить бронь ${id}?</h3><p>Бесплатная отмена возможна не позднее чем за 3 часа до начала.</p><div class="flex flex-wrap gap-3"><button class="btn btn--primary" data-yes type="button">Да, отменить</button><button class="btn btn--ghost" data-close type="button">Оставить</button></div></div>`);
+  $("[data-yes]",m).onclick=()=>{m.close();if(cancelBooking(id)){toast("Бронь отменена");render()}}}};
+render();
+
+});
+</script>
+</body>
+</html>
