@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Отзывы — Pool&amp;Cue</title>
+<meta name="description" content="Отзывы гостей бильярдного клуба Pool&Cue: оценки, комментарии и форма для вашего отзыва.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23150c07' stroke='%23d3a54a' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f1e6d1'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/utilities.css">
+<script src="js/data.js"></script>
+<script src="js/main.js" defer></script>
+</head>
+<body>
+<div id="site-header"></div>
+<main>
+
+<nav class="crumbs container" aria-label="Хлебные крошки" data-trail="Отзывы"></nav>
+<div class="container page-head"><h1 class="page-head__title">Отзывы гостей клуба</h1><p class="page-head__lead">Оценки и впечатления тех, кто уже играл у нас. Оставить отзыв можно после игры.</p></div>
+<div class="container rv">
+  <section><div class="form-panel rv__sum" id="rvSum"></div><div class="chips" style="margin-bottom:1.2rem"><label class="chip"><input type="radio" name="rf" value="all" checked><span>Все</span></label><label class="chip"><input type="radio" name="rf" value="5"><span>5 ★</span></label><label class="chip"><input type="radio" name="rf" value="4"><span>4 ★</span></label><label class="chip"><input type="radio" name="rf" value="3"><span>3 ★ и ниже</span></label></div><div class="rv__list" id="rvList"></div></section>
+  <aside class="form-panel" id="rvBox" style="position:sticky;top:96px"></aside>
+</div>
+</main>
+<div id="site-footer"></div>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+
+const me=Auth.me();let flt="all";
+function draw(){const st=ratingStat();
+ $("#rvSum").innerHTML=`<div><p class="rv__avg">${st.avg.toFixed(1)}</p><span class="stars" role="img" aria-label="Средняя оценка">${stars(Math.round(st.avg))}</span><p class="rec__meta">Отзывов: ${st.n}</p></div><div class="grid gap-2">${st.dist.map((c,i)=>`<div class="bar"><span>${5-i} ★</span><div class="bar__track"><div class="bar__fill" style="width:${st.n?c/st.n*100:0}%"></div></div><span>${c}</span></div>`).join("")}</div>`;
+ const l=allReviews().filter(r=>flt==="all"||(flt==="3"?r.rating<=3:r.rating===+flt));
+ $("#rvList").innerHTML=l.length?l.map(reviewHTML).join(""):`<div class="empty"><p>Отзывов с такой оценкой пока нет.</p></div>`}
+function box(){const B=$("#rvBox");
+ if(!me){B.innerHTML=`<h2 class="text-2xl mb-3">Оставить отзыв</h2><p class="mb-3">Отзыв могут оставить гости после игры. Войдите в аккаунт.</p><a class="btn btn--primary" href="auth.html?next=reviews.html">Войти</a>`;return}
+ const done=new Set(LS.get("pc_reviews",[]).map(r=>r.bookingId)),el=Bookings.mine().filter(b=>b.status==="active"&&b.date<=todayStr()&&!done.has(b.id));
+ if(!el.length){B.innerHTML=`<h2 class="text-2xl mb-3">Оставить отзыв</h2><p class="mb-3">Отзыв можно оставить после игры: нужна бронь, дата которой уже наступила, и на неё ещё нет вашего отзыва.</p><a class="btn btn--ghost" href="catalog.html">Забронировать стол</a>`;return}
+ B.innerHTML=`<h2 class="text-2xl mb-3">Ваш отзыв</h2><form id="rvForm" class="auth__form" novalidate><div class="field"><label class="field__label" for="rvVisit">Ваш визит</label><select class="field__input" id="rvVisit">${el.map(b=>`<option value="${b.id}">Стол «${esc(b.table)}», ${fmtDate(b.date)}</option>`).join("")}</select></div><div class="field"><span class="field__label">Оценка</span><div class="rating-input" role="radiogroup" aria-label="Оценка">${[5,4,3,2,1].map(n=>`<input type="radio" name="rate" id="rt${n}" value="${n}"><label for="rt${n}" aria-label="${n} из 5">★</label>`).join("")}</div></div><div class="field"><label class="field__label" for="rvText">Комментарий</label><textarea class="field__input" id="rvText" data-rule="required minlen:10" placeholder="Что понравилось, что можно улучшить"></textarea></div><button class="btn btn--primary btn--lg" type="submit">Опубликовать отзыв</button></form>`;
+ $("#rvForm").onsubmit=e=>{e.preventDefault();let ok=validateForm(e.target);const r=$("input[name=rate]:checked");setError($(".rating-input"),r?"":"Поставьте оценку");if(!r)ok=false;if(!ok)return;
+  const b=Bookings.all().find(x=>x.id===$("#rvVisit").value);
+  LS.set("pc_reviews",[{id:"u"+Date.now(),name:shortName(me.name),rating:+r.value,table:b.table,text:$("#rvText").value.trim(),date:todayStr(),bookingId:b.id},...LS.get("pc_reviews",[])]);
+  toast("Спасибо! Ваш отзыв опубликован");draw();box()}}
+$$("input[name=rf]").forEach(r=>r.onchange=()=>{flt=r.value;draw()});
+draw();box();
+
+});
+</script>
+</body>
+</html>
